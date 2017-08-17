@@ -28,8 +28,7 @@ Thread currentThread;
 void switcher(Thread prevThread, Thread nextThread) {
 	if (prevThread->state == FINISHED) { // it has finished
 		printf("\ndisposing %d\n", prevThread->tid);
-		free(prevThread->stackAddr); // Wow!
-		//scheduler(prevThread, nextThread); //I added this
+		free(prevThread->stackAddr); // Wow
 		longjmp(nextThread->environment, 1);
 	} else if (setjmp(prevThread->environment) == 0) { // so we can come back here
 		prevThread->state = READY;
@@ -203,8 +202,7 @@ int main(void) {
 	}
 	threads[NUMTHREADS-1]->next = threads[0];
 	threads[NUMTHREADS-1]->prev = threads[NUMTHREADS-2];
-	//threads[NUMTHREADS]->next = threads[0];
-	//threads[NUMTHREADS]->prev = threads[NUMTHREADS-1];
+
     	//node* n = thread[1];
     	//insertNode(head, n);
   	//Thread* tail = threads[1];
