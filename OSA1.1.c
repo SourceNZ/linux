@@ -19,7 +19,7 @@ Thread newThread; // the thread currently being set up
 Thread mainThread; // the main thread
 struct sigaction setUpAction;
 Thread currentThread;
-
+Thread threadList[100];
 
 
 /*
@@ -29,35 +29,39 @@ void switcher(Thread prevThread, Thread nextThread) {
 	if (prevThread->state == FINISHED) { // it has finished
 		printf("\ndisposing %d\n", prevThread->tid);
 		free(prevThread->stackAddr); // Wow
-		longjmp(nextThread->environment, 1);
-	} else if (setjmp(prevThread->environment) == 0) { // so we can come back here
+		longjmp(nextThread->environment, 1); //this goes to associate stack
+	} else if (setjmp(prevThread->environment) == 0) { // this goes to
+		puts("WANT TO BE HERE AFTER DISPOSING");
 		prevThread->state = READY;
 		nextThread->state = RUNNING;
+		printThreadStates(threadList);
 		currentThread = nextThread; //I added this
 		printf("scheduling %d\n", nextThread->tid);
-		longjmp(nextThread->environment, 1);
+		longjmp(nextThread->environment, 1); //this also goes to associate stack
 	}
 }
-//The general idea of scheduler is that, when a thread finishes, or when asked to go to another thread, or when made to go to another thread, you want to find the next thread in your list that is in the READY state. It is possible that the only thread still in the READY state is the same function, so make sure you account for that. If no threads are in the READY state, and all have FINISHED, then you will want to return to the mainThread.
+
 
 void scheduler(Thread prevThread) {
-	puts("\nSCHEDULER ONCE AGAIN");
-	printf("Made it to scheduler and next threadID: %d \n",prevThread->next->tid);
+	puts("\nSCHEDULER SCHEDULER SCHEDULER");
 	int threadAvailable = 0;
 	switch(prevThread->next->state){
 		case READY:
-                	printf("WE HAVE FOUND A READY THREADID: %d", prevThread->next->tid);
 			switcher(prevThread, prevThread->next);
 			threadAvailable = 1;
                 	break;
         	case FINISHED:
-               		puts("Finished");
+               		puts("ALL THREADS FINISHED");
+			threadAvailable = 0;
                		break;
         	case SETUP:
 			puts("Setup");
+			threadAvailable = 0;
                 	break;
 		case RUNNING:
+			switcher(prevThread, prevThread->next);
 			puts("Running");
+			threadAvailable = 1;
                 	break;		
 		
 	}
@@ -65,9 +69,7 @@ void scheduler(Thread prevThread) {
 	puts("PAST THE SWITCH STATEMENT AND SHOULD GO BACK TO MAIN THREAD NOW");
 	if(threadAvailable == 0){
 		switcher(prevThread, mainThread);
-	}
-
-	
+	}	
 }
 
 
@@ -77,16 +79,14 @@ void scheduler(Thread prevThread) {
  * This is called when SIGUSR1 is received.
  */
 void associateStack(int signum) {
-	Thread localThread = newThread; // what if we don't use this local variable?
-	localThread->state = READY; // now it has its stack
-	if (setjmp(localThread->environment) != 0) { // will be zero if called directly
+	Thread localThread = newThread; 
+	localThread->state = READY; 
+	if (setjmp(localThread->environment) != 0) { 
 		(localThread->start)();
 		puts("IN ASSOCIATE STACK");
+		//printThreadStates(threadList);
 		localThread->state = FINISHED;
-		//currentThread = localThread;
-		printf("THE NEXT THREAD FOR LOCAL IS: %d", localThread->next->tid);
 		scheduler(localThread);
-		//switcher(localThread, mainThread); // at the moment back to the main thread
 	}
 }
 
@@ -156,23 +156,6 @@ void printThreadStates(Thread threads[]){
 		}
 }
 
-//void insertThread(Thread* head, Thread* new_thread)
-//{
-  // n is a pointer to the current node
- // Thread* n = &head;
-  //while (NULL != (*n)) {
-    // While the value pointed to by n is not NULL, we just keep
-    // going to the next node in the list
-  //  n = &(*n)->next;
- 
- // }
-
-  // Of course, once we hit a node that's NULL, we have hit the end of the
-  // list, and so this is where we insert the new_node
- // *n = new_thread;
- //  n->prev =  
-  
-//}
 
 int main(void) {
 	struct thread controller;
@@ -182,8 +165,9 @@ int main(void) {
 	setUpStackTransfer();
 	for (int t = 0; t < NUMTHREADS; t++) {
 		threads[t] = createThread(threadFuncs[t]);
+		threadList[t] =threads[t];
 	}
-	//Thread* head = threads[0];
+	//threadList = threads;
 	for(int i = 0; i < NUMTHREADS; i++){
 		if(i == 0){
 		  	threads[i]->next = threads[i+1];
@@ -193,24 +177,18 @@ int main(void) {
 			threads[i]->next = threads[i+1];
 			threads[i]->prev = threads[i-1];
 		}
-		//if(i==NUMTHREADS){
-		//	threads[NUMTHREADS-1]->next = threads[0];
-		//	threads[NUMTHREADS-1]->prev = threads[NUMTHREADS-2];
-			//thread[2]->prev = threads[
-		//}
+	
 		
 	}
 	threads[NUMTHREADS-1]->next = threads[0];
 	threads[NUMTHREADS-1]->prev = threads[NUMTHREADS-2];
 
-    	//node* n = thread[1];
-    	//insertNode(head, n);
-  	//Thread* tail = threads[1];
-  	//insertThread(head, tail);
-	printThreadStates(threads);
+
+	printThreadStates(threadList);
 	puts("\nswitching to first thread\n");
+	printThreadStates(threadList);
 	switcher(mainThread, threads[0]);
 	puts("back to the main thread");
-	printThreadStates(threads);
+	printThreadStates(threadList);
 	return EXIT_SUCCESS;
 }
