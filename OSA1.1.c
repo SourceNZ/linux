@@ -26,32 +26,37 @@ Thread threadList[100];
  * Switches execution from prevThread to nextThread.
  */
 void switcher(Thread prevThread, Thread nextThread) {
-	if (prevThread->state == FINISHED) { // it has finished
+	if (prevThread->state == FINISHED) { 
 		printf("\ndisposing %d\n", prevThread->tid);
 		free(prevThread->stackAddr); // Wow
+		nextThread->state = RUNNING;   //I added this
+		currentThread = nextThread;    //I added this
+		printThreadStates(threadList); //I added this
 		longjmp(nextThread->environment, 1); //this goes to associate stack
-	} else if (setjmp(prevThread->environment) == 0) { // this goes to
-		puts("WANT TO BE HERE AFTER DISPOSING");
+	} else if (setjmp(prevThread->environment) == 0) { 
+		//puts("MADE IT TO SCHEDULING");
 		prevThread->state = READY;
 		nextThread->state = RUNNING;
-		printThreadStates(threadList);
-		currentThread = nextThread; //I added this
-		printf("scheduling %d\n", nextThread->tid);
+		printThreadStates(threadList);  //I added this
+		currentThread = nextThread;     //I added this
+		//printf("scheduling %d\n", nextThread->tid);
 		longjmp(nextThread->environment, 1); //this also goes to associate stack
 	}
 }
 
 
 void scheduler(Thread prevThread) {
-	puts("\nSCHEDULER SCHEDULER SCHEDULER");
+	//printThreadStates(threadList);
+
 	int threadAvailable = 0;
 	switch(prevThread->next->state){
 		case READY:
+			//prevThread->state = FINISHED;
 			switcher(prevThread, prevThread->next);
 			threadAvailable = 1;
                 	break;
         	case FINISHED:
-               		puts("ALL THREADS FINISHED");
+               		//puts("ALL THREADS FINISHED");
 			threadAvailable = 0;
                		break;
         	case SETUP:
@@ -66,7 +71,6 @@ void scheduler(Thread prevThread) {
 		
 	}
 	threadAvailable = 0;
-	puts("PAST THE SWITCH STATEMENT AND SHOULD GO BACK TO MAIN THREAD NOW");
 	if(threadAvailable == 0){
 		switcher(prevThread, mainThread);
 	}	
@@ -83,10 +87,10 @@ void associateStack(int signum) {
 	localThread->state = READY; 
 	if (setjmp(localThread->environment) != 0) { 
 		(localThread->start)();
-		puts("IN ASSOCIATE STACK");
-		//printThreadStates(threadList);
+		//scheduler(localThread);
 		localThread->state = FINISHED;
 		scheduler(localThread);
+
 	}
 }
 
@@ -111,7 +115,6 @@ Thread createThread(void (startFunc)()) {
 	static int nextTID = 0;
 	Thread thread;
 	stack_t threadStack;
-
 	if ((thread = malloc(sizeof(struct thread))) == NULL) {
 		perror("allocating thread");
 		exit(EXIT_FAILURE);
@@ -154,8 +157,8 @@ void printThreadStates(Thread threads[]){
                 		break;
 			}
 		}
+		puts("\n");
 }
-
 
 int main(void) {
 	struct thread controller;
@@ -167,7 +170,6 @@ int main(void) {
 		threads[t] = createThread(threadFuncs[t]);
 		threadList[t] =threads[t];
 	}
-	//threadList = threads;
 	for(int i = 0; i < NUMTHREADS; i++){
 		if(i == 0){
 		  	threads[i]->next = threads[i+1];
@@ -176,19 +178,15 @@ int main(void) {
 		else{
 			threads[i]->next = threads[i+1];
 			threads[i]->prev = threads[i-1];
-		}
-	
-		
+		}		
 	}
 	threads[NUMTHREADS-1]->next = threads[0];
 	threads[NUMTHREADS-1]->prev = threads[NUMTHREADS-2];
-
-
 	printThreadStates(threadList);
 	puts("\nswitching to first thread\n");
 	printThreadStates(threadList);
 	switcher(mainThread, threads[0]);
-	puts("back to the main thread");
+	puts("\nback to the main thread");
 	printThreadStates(threadList);
 	return EXIT_SUCCESS;
 }
