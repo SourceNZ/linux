@@ -34,7 +34,6 @@ void switcher(Thread prevThread, Thread nextThread) {
 		printThreadStates(threadList); //I added this
 		longjmp(nextThread->environment, 1); //this goes to associate stack
 	} else if (setjmp(prevThread->environment) == 0) { 
-		//puts("MADE IT TO SCHEDULING");
 		prevThread->state = READY;
 		nextThread->state = RUNNING;
 		printThreadStates(threadList);  //I added this
@@ -45,18 +44,16 @@ void switcher(Thread prevThread, Thread nextThread) {
 }
 
 
-void scheduler(Thread prevThread) {
-	//printThreadStates(threadList);
 
+void scheduler(Thread prevThread) {
 	int threadAvailable = 0;
 	switch(prevThread->next->state){
 		case READY:
-			//prevThread->state = FINISHED;
 			switcher(prevThread, prevThread->next);
 			threadAvailable = 1;
                 	break;
         	case FINISHED:
-               		//puts("ALL THREADS FINISHED");
+
 			threadAvailable = 0;
                		break;
         	case SETUP:
@@ -70,7 +67,7 @@ void scheduler(Thread prevThread) {
                 	break;		
 		
 	}
-	threadAvailable = 0;
+
 	if(threadAvailable == 0){
 		switcher(prevThread, mainThread);
 	}	
