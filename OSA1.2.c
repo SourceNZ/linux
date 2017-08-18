@@ -49,32 +49,37 @@ void threadYield(){
 }
 
 void scheduler(Thread prevThread) {
-	//it goes through the threads once but ends because it goes back to main.
-	int threadAvailable = 0;
-	switch(prevThread->next->state){
-		case READY:
-			switcher(prevThread, prevThread->next);
-			threadAvailable = 1;
-                	break;
-        	case FINISHED:
-               		//puts("ALL THREADS FINISHED");
-			threadAvailable = 0;
-               		break;
-        	case SETUP:
-			puts("Setup");
-			threadAvailable = 0;
-                	break;
-		case RUNNING:
-			switcher(prevThread, prevThread->next);
-			puts("Running");
-			threadAvailable = 1;
-                	break;		
-		
-	}
-	//threadAvailable = 0;
-	if(threadAvailable == 0){
-		switcher(prevThread, mainThread);
-	}	
+		switch(prevThread->next->state){
+			case READY:
+				switcher(prevThread, prevThread->next);
+		        	break;
+			case SETUP:
+				prevThread->next->prev = prevThread->prev;
+				prevThread->prev->next = prevThread->next;
+				if(prevThread->next == prevThread->prev){
+					switcher(prevThread, mainThread);
+					break;
+				}
+				else{
+					scheduler(prevThread->next);
+		       			break;
+				}
+		        	break;
+			case RUNNING:
+		        	break;	
+			case FINISHED:
+				prevThread->next->prev = prevThread->prev;
+				prevThread->prev->next = prevThread->next;
+				if(prevThread->next == prevThread->prev){
+					prevThread->state = READY;
+					switcher(prevThread, mainThread);
+					break;
+				}
+				else{
+					scheduler(prevThread->next);
+		       			break;
+				}
+		}
 }
 
 

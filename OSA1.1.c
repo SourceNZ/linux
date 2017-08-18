@@ -13,7 +13,7 @@
 #include <unistd.h>
 
 #include "littleThread.h"
-#include "threads1.c" // rename this for different threads
+#include "threads1.c" 
 
 Thread newThread; // the thread currently being set up
 Thread mainThread; // the main thread
@@ -21,10 +21,6 @@ struct sigaction setUpAction;
 Thread currentThread;
 Thread threadList[100];
 
-
-/*
- * Switches execution from prevThread to nextThread.
- */
 void switcher(Thread prevThread, Thread nextThread) {
 	if (prevThread->state == FINISHED) { 
 		printf("\ndisposing %d\n", prevThread->tid);
@@ -34,80 +30,68 @@ void switcher(Thread prevThread, Thread nextThread) {
 		printThreadStates(threadList); //I added this
 		longjmp(nextThread->environment, 1); //this goes to associate stack
 	} else if (setjmp(prevThread->environment) == 0) { 
-		prevThread->state = READY;
+		prevThread->state = FINISHED;
 		nextThread->state = RUNNING;
 		printThreadStates(threadList);  //I added this
 		currentThread = nextThread;     //I added this
-		//printf("scheduling %d\n", nextThread->tid);
 		longjmp(nextThread->environment, 1); //this also goes to associate stack
 	}
 }
 
-
-
 void scheduler(Thread prevThread) {
-	int threadAvailable = 0;
-	switch(prevThread->next->state){
-		case READY:
-			switcher(prevThread, prevThread->next);
-			threadAvailable = 1;
-                	break;
-        	case FINISHED:
-
-			threadAvailable = 0;
-               		break;
-        	case SETUP:
-			puts("Setup");
-			threadAvailable = 0;
-                	break;
-		case RUNNING:
-			switcher(prevThread, prevThread->next);
-			puts("Running");
-			threadAvailable = 1;
-                	break;		
-		
-	}
-
-	if(threadAvailable == 0){
-		switcher(prevThread, mainThread);
-	}	
+		switch(prevThread->next->state){
+			case READY:
+				switcher(prevThread, prevThread->next);
+		        	break;
+			case SETUP:
+				prevThread->next->prev = prevThread->prev;
+				prevThread->prev->next = prevThread->next;
+				if(prevThread->next == prevThread->prev){
+					switcher(prevThread, mainThread);
+					break;
+				}
+				else{
+					scheduler(prevThread->next);
+		       			break;
+				}
+		        	break;
+			case RUNNING:
+		        	break;	
+			case FINISHED:
+				prevThread->next->prev = prevThread->prev;
+				prevThread->prev->next = prevThread->next;
+				if(prevThread->next == prevThread->prev){
+					prevThread->state = READY;
+					//free(prevThread->stackAddr);
+					switcher(prevThread, mainThread);
+					break;
+				}
+				else{
+					scheduler(prevThread->next);
+		       			break;
+				}
+		}
 }
 
-
-/*
- * Associates the signal stack with the newThread.
- * Also sets up the newThread to start running after it is long jumped to.
- * This is called when SIGUSR1 is received.
- */
 void associateStack(int signum) {
 	Thread localThread = newThread; 
 	localThread->state = READY; 
 	if (setjmp(localThread->environment) != 0) { 
 		(localThread->start)();
-		//scheduler(localThread);
 		localThread->state = FINISHED;
+		currentThread = localThread;
 		scheduler(localThread);
 
 	}
 }
 
-/*
- * Sets up the user signal handler so that when SIGUSR1 is received
- * it will use a separate stack. This stack is then associated with
- * the newThread when the signal handler associateStack is executed.
- */
+
 void setUpStackTransfer() {
 	setUpAction.sa_handler = (void *) associateStack;
 	setUpAction.sa_flags = SA_ONSTACK;
 	sigaction(SIGUSR1, &setUpAction, NULL);
 }
 
-/*
- *  Sets up the new thread.
- *  The startFunc is the function called when the thread starts running.
- *  It also allocates space for the thread's stack.
- *  This stack will be the stack used by the SIGUSR1 signal handler.
- */
 Thread createThread(void (startFunc)()) {
 	static int nextTID = 0;
 	Thread thread;
@@ -165,7 +149,7 @@ int main(void) {
 	setUpStackTransfer();
 	for (int t = 0; t < NUMTHREADS; t++) {
 		threads[t] = createThread(threadFuncs[t]);
-		threadList[t] =threads[t];
+		threadList[t] = threads[t];
 	}
 	for(int i = 0; i < NUMTHREADS; i++){
 		if(i == 0){
@@ -175,13 +159,14 @@ int main(void) {
 		else{
 			threads[i]->next = threads[i+1];
 			threads[i]->prev = threads[i-1];
-		}		
+		}	
 	}
 	threads[NUMTHREADS-1]->next = threads[0];
 	threads[NUMTHREADS-1]->prev = threads[NUMTHREADS-2];
 	printThreadStates(threadList);
 	puts("\nswitching to first thread\n");
 	printThreadStates(threadList);
+	//threads[2]->state = FINISHED;
 	switcher(mainThread, threads[0]);
 	puts("\nback to the main thread");
 	printThreadStates(threadList);
