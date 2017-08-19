@@ -62,7 +62,6 @@ void scheduler(Thread prevThread) {
 				prevThread->prev->next = prevThread->next;
 				if(prevThread->next == prevThread->prev){
 					prevThread->state = READY;
-					//free(prevThread->stackAddr);
 					switcher(prevThread, mainThread);
 					break;
 				}
@@ -166,7 +165,7 @@ int main(void) {
 	printThreadStates(threadList);
 	puts("\nswitching to first thread\n");
 	printThreadStates(threadList);
-	//threads[2]->state = FINISHED;
+	//threads[1]->state = FINISHED;
 	switcher(mainThread, threads[0]);
 	puts("\nback to the main thread");
 	printThreadStates(threadList);

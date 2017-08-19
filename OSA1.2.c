@@ -29,18 +29,19 @@ void switcher(Thread prevThread, Thread nextThread) {
 	if (prevThread->state == FINISHED) { 
 		printf("\ndisposing %d\n", prevThread->tid);
 		free(prevThread->stackAddr); // Wow
-		nextThread->state = RUNNING;   //I added this
-		currentThread = nextThread;    //I added this
-		printThreadStates(threadList); //I added this
+		nextThread->state = RUNNING;  	
+		currentThread = nextThread;    
+		printThreadStates(threadList); 
 		longjmp(nextThread->environment, 1); //this goes to associate stack
-	} else if (setjmp(prevThread->environment) == 0) { 
+	} 
+	else if (setjmp(prevThread->environment) == 0) { 
 		prevThread->state = READY;
 		nextThread->state = RUNNING;
-		printThreadStates(threadList);  //I added this
-		currentThread = nextThread;     //I added this
-		//printf("scheduling %d\n", nextThread->tid);
+		printThreadStates(threadList);  
+		currentThread = nextThread;     
 		longjmp(nextThread->environment, 1); //this also goes to associate stack
 	}
+	
 }
 
 void threadYield(){
@@ -51,33 +52,24 @@ void threadYield(){
 void scheduler(Thread prevThread) {
 		switch(prevThread->next->state){
 			case READY:
+				printf("THREAD ID BEING PASSED TO SWITCHER IN READY: %d \n", prevThread->next->tid);
 				switcher(prevThread, prevThread->next);
-		        	break;
-			case SETUP:
-				prevThread->next->prev = prevThread->prev;
-				prevThread->prev->next = prevThread->next;
-				if(prevThread->next == prevThread->prev){
-					switcher(prevThread, mainThread);
-					break;
-				}
-				else{
-					scheduler(prevThread->next);
-		       			break;
-				}
 		        	break;
 			case RUNNING:
 		        	break;	
 			case FINISHED:
-				prevThread->next->prev = prevThread->prev;
-				prevThread->prev->next = prevThread->next;
+				//printf("PREV: %d NEXT: %d \n", prevThread->prev->tid, prevThread->next->tid);
 				if(prevThread->next == prevThread->prev){
-					prevThread->state = READY;
+					//prevThread->state = READY;
+	//printf("THREAD ID BEING PASSED TO SWITCHER IN FINISHED: %d \n", prevThread->tid);
 					switcher(prevThread, mainThread);
 					break;
 				}
 				else{
+					//prevThread->next->prev = prevThread->prev;
+					//prevThread->prev->next = prevThread->next;
+	//printf("THREAD ID BEING PASSED TO SWITCHER IN FINISHED: %d \n", prevThread->next->tid);
 					scheduler(prevThread->next);
-		       			break;
 				}
 		}
 }
@@ -93,8 +85,10 @@ void associateStack(int signum) {
 	localThread->state = READY; 
 	if (setjmp(localThread->environment) != 0) { 
 		(localThread->start)();
-		//scheduler(localThread);
 		localThread->state = FINISHED;
+		currentThread = localThread;
+		localThread->next->prev = localThread->prev;
+		localThread->prev->next = localThread->next;
 		scheduler(localThread);
 
 	}
@@ -184,13 +178,16 @@ int main(void) {
 		else{
 			threads[i]->next = threads[i+1];
 			threads[i]->prev = threads[i-1];
-		}		
+		}	
+		threadList[i] =threads[i];	
 	}
 	threads[NUMTHREADS-1]->next = threads[0];
 	threads[NUMTHREADS-1]->prev = threads[NUMTHREADS-2];
+	//threads[1]->state = FINISHED;
 	printThreadStates(threadList);
 	puts("\nswitching to first thread\n");
 	printThreadStates(threadList);
+	
 	switcher(mainThread, threads[0]);
 	puts("\nback to the main thread");
 	printThreadStates(threadList);
