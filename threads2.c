@@ -19,9 +19,15 @@ void thread2() {
 		threadYield();
 	}
 }
-
-const int NUMTHREADS = 3;
+void thread3() { 
+	int i;
+	for (i = 0; i < 3; i++) {
+		puts("3");
+		threadYield();
+	}
+}
+const int NUMTHREADS = 5;
 
 typedef void (*threadPtr)();
 
-threadPtr threadFuncs[] = {thread1, thread2, thread2};
+threadPtr threadFuncs[] = {thread1, thread2, thread2, thread3, thread3};

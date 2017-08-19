@@ -180,7 +180,6 @@ int main(void) {
 	//threads[1]->state = FINISHED;
 	printThreadStates(threadList);
 	puts("\nswitching to first thread\n");
-	printThreadStates(threadList);
 	
 	switcher(mainThread, threads[0]);
 	puts("\nback to the main thread");

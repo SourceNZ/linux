@@ -43,10 +43,10 @@ void thread1() {
 	int i;
 	for (i = 0; i < 5; i++) {
 		wasteTime(10);
-		// signalsOff();
+		//signalsOff();
 		puts("hi");
 		printf("%d\n", wasteTime(10));
-		// signalsOn();
+		//signalsOn();
 	}
 }
 
