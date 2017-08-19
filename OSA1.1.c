@@ -25,15 +25,15 @@ void switcher(Thread prevThread, Thread nextThread) {
 	if (prevThread->state == FINISHED) { 
 		printf("\ndisposing %d\n", prevThread->tid);
 		free(prevThread->stackAddr); // Wow
-		nextThread->state = RUNNING;   //I added this
-		currentThread = nextThread;    //I added this
-		printThreadStates(threadList); //I added this
+		nextThread->state = RUNNING;   
+		currentThread = nextThread;    
+		printThreadStates(threadList); 
 		longjmp(nextThread->environment, 1); //this goes to associate stack
 	} else if (setjmp(prevThread->environment) == 0) { 
 		prevThread->state = FINISHED;
 		nextThread->state = RUNNING;
-		printThreadStates(threadList);  //I added this
-		currentThread = nextThread;     //I added this
+		printThreadStates(threadList);  
+		currentThread = nextThread;     
 		longjmp(nextThread->environment, 1); //this also goes to associate stack
 	}
 }
@@ -43,31 +43,15 @@ void scheduler(Thread prevThread) {
 			case READY:
 				switcher(prevThread, prevThread->next);
 		        	break;
-			case SETUP:
-				prevThread->next->prev = prevThread->prev;
-				prevThread->prev->next = prevThread->next;
-				if(prevThread->next == prevThread->prev){
-					switcher(prevThread, mainThread);
-					break;
-				}
-				else{
-					scheduler(prevThread->next);
-		       			break;
-				}
-		        	break;
 			case RUNNING:
 		        	break;	
 			case FINISHED:
-				prevThread->next->prev = prevThread->prev;
-				prevThread->prev->next = prevThread->next;
 				if(prevThread->next == prevThread->prev){
-					prevThread->state = READY;
 					switcher(prevThread, mainThread);
 					break;
 				}
 				else{
 					scheduler(prevThread->next);
-		       			break;
 				}
 		}
 }
@@ -78,6 +62,8 @@ void associateStack(int signum) {
 	if (setjmp(localThread->environment) != 0) { 
 		(localThread->start)();
 		localThread->state = FINISHED;
+		localThread->next->prev = localThread->prev;
+		localThread->prev->next = localThread->next;
 		currentThread = localThread;
 		scheduler(localThread);
 
@@ -164,8 +150,6 @@ int main(void) {
 	threads[NUMTHREADS-1]->prev = threads[NUMTHREADS-2];
 	printThreadStates(threadList);
 	puts("\nswitching to first thread\n");
-	printThreadStates(threadList);
-	//threads[1]->state = FINISHED;
 	switcher(mainThread, threads[0]);
 	puts("\nback to the main thread");
 	printThreadStates(threadList);

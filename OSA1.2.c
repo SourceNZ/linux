@@ -52,23 +52,17 @@ void threadYield(){
 void scheduler(Thread prevThread) {
 		switch(prevThread->next->state){
 			case READY:
-				printf("THREAD ID BEING PASSED TO SWITCHER IN READY: %d \n", prevThread->next->tid);
 				switcher(prevThread, prevThread->next);
 		        	break;
 			case RUNNING:
 		        	break;	
 			case FINISHED:
-				//printf("PREV: %d NEXT: %d \n", prevThread->prev->tid, prevThread->next->tid);
+
 				if(prevThread->next == prevThread->prev){
-					//prevThread->state = READY;
-	//printf("THREAD ID BEING PASSED TO SWITCHER IN FINISHED: %d \n", prevThread->tid);
 					switcher(prevThread, mainThread);
 					break;
 				}
 				else{
-					//prevThread->next->prev = prevThread->prev;
-					//prevThread->prev->next = prevThread->next;
-	//printf("THREAD ID BEING PASSED TO SWITCHER IN FINISHED: %d \n", prevThread->next->tid);
 					scheduler(prevThread->next);
 				}
 		}
