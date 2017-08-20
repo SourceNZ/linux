@@ -20,7 +20,7 @@ Thread newThread; // the thread currently being set up
 Thread mainThread; // the main thread
 struct sigaction setUpAction;
 struct itimerval timer;
-struct sigaction sa;
+struct sigaction sigact;
 Thread currentThread;
 Thread threadList[100];
 
@@ -160,10 +160,11 @@ void timer_handler(int signum){
 	scheduler(currentThread);
 
 }
+//used http://www.informit.com/articles/article.aspx?p=23618&seqNum=14 to help make this code.
 void setUpTimer(){
-	 memset (&sa, 0, sizeof (sa));
-	 sa.sa_handler = &timer_handler;
-	 sigaction (SIGVTALRM, &sa, NULL);
+	 memset (&sigact, 0, sizeof (sigact));
+	 sigact.sa_handler = &timer_handler;
+	 sigaction (SIGVTALRM, &sigact, NULL);
 	 timer.it_value.tv_sec = 0;
 	 timer.it_value.tv_usec = 20000;
 	 timer.it_interval.tv_sec = 0;
